@@ -1,12 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // 匹配資料庫中的所有文件
     match /{document=**} {
-      // 核心規則：只要 request.auth 不是 null（代表有登入），就允許讀寫
       allow read, write: if request.auth != null;
     }
-    
   }
 }
