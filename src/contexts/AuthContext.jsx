@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import app from '../firebase';
 
 const AuthContext = createContext();
@@ -27,8 +27,13 @@ export function AuthProvider({ children }) {
     }, []);
 
     // 準備要廣播出去的資料
+    const logout = () => {
+        return signOut(auth);
+    };
+
     const value = {
-        currentUser
+        currentUser,
+        logout
     };
 
     // 3. 只要還在 loading，就不渲染內部的畫面 (children)
