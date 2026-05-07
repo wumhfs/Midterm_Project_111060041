@@ -117,7 +117,7 @@ export default function Login() {
                     <input
                         type="password"
                         className="login-input"
-                        placeholder="請輸入密碼"
+                        placeholder="請輸入密碼(至少6位)"
                         value={password}
                         onChange={handlePasswordChange}
                         required

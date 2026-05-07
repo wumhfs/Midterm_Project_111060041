@@ -1,16 +1,52 @@
-# React + Vite
+## 系統環境要求 (Prerequisites)
+- node.js與npm
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 啟動步驟
+1. cd到Midterm_Project_111060041資料夾(注意.env檔案被.gitignore忽略，只包含於zip檔案中)
+2. npm install(json已包含react-router-dom等其他套件)
+3. npm run dev
 
-Currently, two official plugins are available:
+## 線上網址
+https://midterm-project-111060041.web.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 網站功能 - 基礎元件
+### root(Login)
+-email地址+密碼登入/註冊(點擊最底下文字切換模式)
+-小螢幕下維持可見
+### /chat
+-建立群組(點擊左上"新增聊天室")
+-查看群組列表(左側)與內容(點擊群組在右側查看，無頭像者顯示為空白頭像)
+-以email地址搜尋使用者並加入群組(點擊右上角"邀請成員")
+-傳送文字訊息
+-設定個人資料(完成後跳轉至/profile)
+-登出(跳轉回root)
 
-## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## 網站功能 - 進階元件
+-完全使用React框架開發
+-防範惡意程式碼注入(XSS)：歸功於 React 框架的特性，JSX 會自動將所有輸入的 HTML 與 Script 標籤轉換為純文字顯示。
+-載入時浮現動畫
+### root(Login)
+- Google帳號第三方登入(&自動註冊)
+### /chat
+-閒置未查看時新增未讀訊息通知
+-編輯/刪除訊息(滑鼠懸浮目標訊息上方後顯示)
+-搜尋訊息(右上角輸入"搜尋訊息...")
+-傳送圖片(點擊右下角+號選擇檔案)
+### /profile
+-設定個人資料(大頭貼、名稱、email、電話號碼、地址)
+-儲存後自動跳轉回/chat
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+## 網站功能 - 加分組件
+-封鎖其他使用者(滑鼠懸浮目標訊息上方後顯示)
+-回覆訊息(滑鼠懸浮目標訊息上方後顯示)
+-查看回覆的特定訊息(點擊藍灰色內容)
+
+
+## 可測試用空白帳號/密碼
+- 1@e.com/111111
+- 2@e.com/222222
+- 3@e.com/333333
