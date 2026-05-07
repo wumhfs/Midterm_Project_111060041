@@ -32,7 +32,7 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     text-align: center;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow: hidden;
     animation: loginFadeIn 0.5s ease-out forwards;
 }
 
@@ -61,6 +61,7 @@
     border-radius: 4px;
     font-size: 14px;
     box-sizing: border-box;
+    min-width: 0;
 }
 
 .login-button {
@@ -140,5 +141,38 @@
 
     .toggle-mode-btn {
         margin-top: 10px;
+    }
+}
+
+@media (max-height: 480px) {
+    .login-card {
+        padding: 10px 15px;
+    }
+
+    .login-title {
+        margin-bottom: 5px;
+        font-size: 16px;
+    }
+
+    .login-form {
+        gap: 5px;
+    }
+
+    .login-input {
+        padding: 4px;
+        font-size: 13px;
+    }
+
+    .divider {
+        margin: 5px 0;
+    }
+
+    .login-button {
+        padding: 4px;
+        font-size: 13px;
+    }
+
+    .toggle-mode-btn {
+        margin-top: 5px;
     }
 }

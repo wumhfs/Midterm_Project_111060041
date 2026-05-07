@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useNavigate } from 'react-router-dom';
 import app from '../firebase';
 import './Profile.css';
 
 export default function Profile() {
     const { currentUser } = useAuth();
+    const navigate = useNavigate();
     const db = getFirestore(app);
     const storage = getStorage(app);
 
@@ -65,7 +67,10 @@ export default function Profile() {
                 address: userData.address,
                 profilePicture: userData.profilePicture
             });
-            setMessage('個人資料已成功更新！');
+            setMessage('個人資料已成功更新！跳轉中...');
+            setTimeout(function() {
+                navigate('/chat');
+            }, 1000);
         } catch (error) {
             setMessage('儲存失敗：' + error.message);
         }

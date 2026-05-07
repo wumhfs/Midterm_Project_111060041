@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     getFirestore, collection, query, where, onSnapshot,
-    addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, arrayUnion
+    addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, arrayUnion, arrayRemove
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
@@ -31,15 +31,14 @@ export default function Chat() {
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            const usersSnapshot = await getDocs(collection(db, "users"));
+        const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
             const cache = {};
-            usersSnapshot.forEach(doc => {
+            snapshot.forEach(doc => {
                 cache[doc.id] = doc.data();
             });
             setUsersCache(cache);
-        };
-        fetchUsers();
+        });
+        return () => unsubscribe();
     }, [db]);
 
     useEffect(() => {
@@ -128,6 +127,28 @@ export default function Chat() {
             members: [currentUser.uid],
             createdAt: serverTimestamp()
         });
+    }
+
+    async function handleBlockUser(targetUserId) {
+        if (!window.confirm("確定要封鎖此使用者嗎？封鎖後將無法再互相接收訊息。")) return;
+        try {
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                blockedUsers: arrayUnion(targetUserId)
+            });
+        } catch (error) {
+            alert("封鎖失敗：" + error.message);
+        }
+    }
+
+    async function handleUnblockUser(targetUserId) {
+        if (!window.confirm("確定要解除封鎖嗎？")) return;
+        try {
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                blockedUsers: arrayRemove(targetUserId)
+            });
+        } catch (error) {
+            alert("解除封鎖失敗：" + error.message);
+        }
     }
 
     async function handleInviteMember() {
@@ -232,7 +253,7 @@ export default function Chat() {
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setHighlightMsgId(msgId);
-            setTimeout(function() {
+            setTimeout(function () {
                 setHighlightMsgId(null);
             }, 2000);
         } else {
@@ -309,12 +330,73 @@ export default function Chat() {
 
     let mainChatContent = null;
     if (currentRoom) {
+        let isDirectMessage = false;
+        let otherUserId = null;
+        let totalOtherMembers = 0;
+        let blockedOtherMembers = 0;
+        let iBlockedThemCount = 0;
+
+        if (currentRoom.members) {
+            if (currentRoom.members.length === 2) {
+                isDirectMessage = true;
+            }
+
+            for (let i = 0; i < currentRoom.members.length; i++) {
+                let memberId = currentRoom.members[i];
+                if (memberId !== currentUser.uid) {
+                    totalOtherMembers++;
+                    if (isDirectMessage) {
+                        otherUserId = memberId;
+                    }
+
+                    let myBlocked = [];
+                    if (usersCache[currentUser.uid] && usersCache[currentUser.uid].blockedUsers) {
+                        myBlocked = usersCache[currentUser.uid].blockedUsers;
+                    }
+
+                    let theirBlocked = [];
+                    if (usersCache[memberId] && usersCache[memberId].blockedUsers) {
+                        theirBlocked = usersCache[memberId].blockedUsers;
+                    }
+
+                    let iBlockedThem = myBlocked.includes(memberId);
+                    let theyBlockedMe = theirBlocked.includes(currentUser.uid);
+
+                    if (iBlockedThem || theyBlockedMe) {
+                        blockedOtherMembers++;
+                        if (iBlockedThem) {
+                            iBlockedThemCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        let allBlocked = (totalOtherMembers > 0 && blockedOtherMembers === totalOtherMembers);
+        let someBlocked = (blockedOtherMembers > 0 && blockedOtherMembers < totalOtherMembers);
+
         let messageElements = [];
         for (let i = 0; i < filteredMessages.length; i++) {
             let msg = filteredMessages[i];
             let isMine = false;
             if (msg.senderId === currentUser.uid) {
                 isMine = true;
+            }
+
+            // Group chat filtering
+            if (!isDirectMessage && !isMine) {
+                let myBlocked = [];
+                if (usersCache[currentUser.uid] && usersCache[currentUser.uid].blockedUsers) {
+                    myBlocked = usersCache[currentUser.uid].blockedUsers;
+                }
+                let theirBlocked = [];
+                if (usersCache[msg.senderId] && usersCache[msg.senderId].blockedUsers) {
+                    theirBlocked = usersCache[msg.senderId].blockedUsers;
+                }
+
+                if (myBlocked.includes(msg.senderId) || theirBlocked.includes(currentUser.uid)) {
+                    continue; // Hide messages mutually
+                }
             }
 
             let senderInfo = usersCache[msg.senderId];
@@ -369,10 +451,10 @@ export default function Chat() {
                 }
 
                 quotedMessageElement = (
-                    <div 
-                        className="quoted-message" 
+                    <div
+                        className="quoted-message"
                         style={{ cursor: 'pointer' }}
-                        onClick={function() { scrollToOriginalMessage(msg.replyTo.id); }}
+                        onClick={function () { scrollToOriginalMessage(msg.replyTo.id); }}
                     >
                         <strong>{quoteSenderName}: </strong>
                         {quoteContent}
@@ -390,11 +472,15 @@ export default function Chat() {
             let messageActionsElement = null;
             let editButton = null;
             let deleteButton = null;
+            let blockButton = null;
+
             if (isMine) {
                 if (msg.type === 'text') {
                     editButton = <button onClick={function () { startEditing(msg); }}>編輯</button>;
                 }
                 deleteButton = <button onClick={function () { handleDeleteMessage(msg.id); }}>收回</button>;
+            } else if (!isDirectMessage) {
+                blockButton = <button onClick={function () { handleBlockUser(msg.senderId); }}>封鎖</button>;
             }
 
             let replyButton = <button onClick={function () { startReplying(msg); }}>回覆</button>;
@@ -404,6 +490,7 @@ export default function Chat() {
                     {replyButton}
                     {editButton}
                     {deleteButton}
+                    {blockButton}
                 </div>
             );
 
@@ -475,6 +562,56 @@ export default function Chat() {
                 </div>
             );
         }
+        let inputContainerContent = null;
+        if (allBlocked) {
+            let unblockButtonElement = null;
+            if (isDirectMessage && iBlockedThemCount === 1 && otherUserId) {
+                unblockButtonElement = <button onClick={function () { handleUnblockUser(otherUserId); }} className="unblock-btn">解除封鎖</button>;
+            }
+            inputContainerContent = (
+                <div className="blocked-warning-box">
+                    <p>{isDirectMessage ? "你們無法再繼續聊天。" : "群組內所有成員皆已被封鎖，無法再傳送訊息。"}</p>
+                    {unblockButtonElement}
+                </div>
+            );
+        } else {
+            let someBlockedWarning = null;
+            if (someBlocked) {
+                someBlockedWarning = (
+                    <div className="some-blocked-warning" style={{ textAlign: 'center', padding: '5px', fontSize: '12px', color: '#856404', backgroundColor: '#fff3cd' }}>
+                        部分成員已被封鎖，將互相隱藏訊息。
+                    </div>
+                );
+            }
+            inputContainerContent = (
+                <>
+                    {someBlockedWarning}
+                    <form className="chat-input-area" onSubmit={handleSendMessage}>
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={handleInputChange}
+                            placeholder={inputPlaceholder}
+                            disabled={uploadingImage}
+                        />
+                        <label className="upload-btn">
+                            +
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleSendImage}
+                                style={{ display: 'none' }}
+                                disabled={uploadingImage}
+                            />
+                        </label>
+                        <button type="submit" disabled={submitDisabled}>
+                            {submitButtonText}
+                        </button>
+                        {cancelEditButton}
+                    </form>
+                </>
+            );
+        }
 
         mainChatContent = [
             <div key="header" className="chat-header">
@@ -491,6 +628,9 @@ export default function Chat() {
                         className="search-input"
                     />
                     <button onClick={handleInviteMember}>邀請成員</button>
+                    {isDirectMessage && !allBlocked ? (
+                        <button onClick={function () { handleBlockUser(otherUserId); }} className="block-btn">封鎖此人</button>
+                    ) : null}
                 </div>
             </div>,
 
@@ -501,29 +641,7 @@ export default function Chat() {
 
             <div key="input-container" className="input-container">
                 {replyPreviewElement}
-                <form className="chat-input-area" onSubmit={handleSendMessage}>
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={handleInputChange}
-                        placeholder={inputPlaceholder}
-                        disabled={uploadingImage}
-                    />
-                    <label className="upload-btn">
-                        +
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSendImage}
-                            style={{ display: 'none' }}
-                            disabled={uploadingImage}
-                        />
-                    </label>
-                    <button type="submit" disabled={submitDisabled}>
-                        {submitButtonText}
-                    </button>
-                    {cancelEditButton}
-                </form>
+                {inputContainerContent}
             </div>
         ];
     } else {

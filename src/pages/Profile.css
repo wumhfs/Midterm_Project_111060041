@@ -78,6 +78,7 @@
     box-sizing: border-box;
     outline: none;
     transition: border-color 0.2s;
+    min-width: 0;
 }
 
 .profile-field input:focus,
@@ -129,7 +130,6 @@
     cursor: not-allowed;
 }
 
-/* 針對寬度較窄或高度較短的螢幕，縮小內距、字體、圖片尺寸以避免產生捲軸 */
 @media (max-width: 600px),
 (max-height: 800px) {
     .profile-card {
@@ -166,6 +166,45 @@
     .profile-save-btn {
         padding: 6px;
         font-size: 14px;
+        margin-top: 2px;
+    }
+}
+
+@media (max-height: 480px) {
+    .profile-card {
+        padding: 8px;
+    }
+
+    .profile-title {
+        font-size: 16px;
+        margin-bottom: 2px;
+    }
+
+    .profile-form {
+        gap: 2px;
+    }
+
+    .profile-field input[type="text"],
+    .profile-field input[type="email"],
+    .profile-field input[type="tel"] {
+        padding: 2px;
+        font-size: 12px;
+    }
+
+    .profile-field textarea {
+        height: 25px;
+        padding: 2px;
+        font-size: 12px;
+    }
+
+    .profile-image-preview {
+        width: 40px;
+        height: 40px;
+    }
+
+    .profile-save-btn {
+        padding: 4px;
+        font-size: 12px;
         margin-top: 2px;
     }
 }
