@@ -28,20 +28,16 @@ export default function Login() {
 
         try {
             if (isRegisterMode) {
-                // 執行註冊
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
-
-                // 註冊成功後，依規範建立使用者的初始個人資料
                 await setDoc(doc(db, "users", user.uid), {
                     email: user.email,
-                    username: user.email.split('@')[0], // 預設使用 Email 前綴作為名稱
+                    username: user.email.split('@')[0],
                     profilePicture: "",
                     phoneNumber: "",
                     address: ""
                 });
             } else {
-                // 執行登入
                 await signInWithEmailAndPassword(auth, email, password);
             }
             navigate('/chat');
@@ -58,12 +54,9 @@ export default function Login() {
         try {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
-
-            // 檢查該 Google 帳號是否為初次登入
             const userDocRef = doc(db, "users", user.uid);
             const userDoc = await getDoc(userDocRef);
 
-            // 如果在資料庫中找不到該使用者，代表是初次登入，依規範建立初始資料
             if (!userDoc.exists()) {
                 await setDoc(userDocRef, {
                     email: user.email,
@@ -87,26 +80,22 @@ export default function Login() {
                 {errorMsg && <div className="error-message">{errorMsg}</div>}
 
                 <form className="login-form" onSubmit={handleEmailAuth}>
-                    <div className="input-group">
-                        <input
-                            type="email"
-                            className="login-input"
-                            placeholder="請輸入 Email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="input-group">
-                        <input
-                            type="password"
-                            className="login-input"
-                            placeholder="請輸入密碼"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                    </div>
+                    <input
+                        type="email"
+                        className="login-input"
+                        placeholder="請輸入 Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                    <input
+                        type="password"
+                        className="login-input"
+                        placeholder="請輸入密碼"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
                     <button type="submit" className="login-button primary-btn">
                         {isRegisterMode ? '註冊' : '登入'}
                     </button>

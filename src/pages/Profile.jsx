@@ -21,21 +21,15 @@ export default function Profile() {
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState('');
 
-    // 1. 初始化資料抓取 (對應規範：Database read/write authenticated way)
     useEffect(() => {
         const fetchUserData = async () => {
             if (currentUser) {
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setUserData(docSnap.data());
-                }
+                const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+                if (docSnap.exists()) setUserData(docSnap.data());
             }
         };
         fetchUserData();
     }, [currentUser, db]);
-
-    // 2. 處理大頭貼上傳 (對應規範：Profile picture 欄位與圖片發送基礎)
     const handleImageChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -56,15 +50,12 @@ export default function Profile() {
         }
     };
 
-    // 3. 儲存變更 (對應規範：Editable and storable fields)
     const handleSave = async (e) => {
         e.preventDefault();
         setMessage('儲存中...');
 
         try {
-            const userRef = doc(db, "users", currentUser.uid);
-            // 這裡傳入的物件欄位完全符合投影片 10% 加分要求
-            await updateDoc(userRef, {
+            await updateDoc(doc(db, "users", currentUser.uid), {
                 username: userData.username,
                 email: userData.email,
                 phoneNumber: userData.phoneNumber,
@@ -89,68 +80,30 @@ export default function Profile() {
                 {message && <p className="profile-message">{message}</p>}
 
                 <form onSubmit={handleSave} className="profile-form">
-                    {/* 大頭貼 (Profile picture) */}
                     <div className="profile-field">
                         <label>大頭貼：</label>
                         <div className="profile-picture-container">
                             {userData.profilePicture && (
-                                <img
-                                    src={userData.profilePicture}
-                                    alt="Profile"
-                                    className="profile-image-preview"
-                                />
+                                <img src={userData.profilePicture} alt="Profile" className="profile-image-preview" />
                             )}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                disabled={uploading}
-                                className="profile-file-input"
-                            />
+                            <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} className="profile-file-input" />
                         </div>
                     </div>
-
-                    {/* 使用者名稱 (Username) */}
                     <div className="profile-field">
                         <label>使用者名稱：</label>
-                        <input
-                            type="text"
-                            name="username"
-                            value={userData.username}
-                            onChange={handleChange}
-                        />
+                        <input type="text" name="username" value={userData.username} onChange={handleChange} />
                     </div>
-
-                    {/* Email (Email) */}
                     <div className="profile-field">
                         <label>Email：</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={userData.email}
-                            onChange={handleChange}
-                        />
+                        <input type="email" name="email" value={userData.email} onChange={handleChange} />
                     </div>
-
-                    {/* 電話號碼 (Phone number) */}
                     <div className="profile-field">
                         <label>電話號碼：</label>
-                        <input
-                            type="tel"
-                            name="phoneNumber"
-                            value={userData.phoneNumber}
-                            onChange={handleChange}
-                        />
+                        <input type="tel" name="phoneNumber" value={userData.phoneNumber} onChange={handleChange} />
                     </div>
-
-                    {/* 地址 (Address) */}
                     <div className="profile-field">
                         <label>地址：</label>
-                        <textarea
-                            name="address"
-                            value={userData.address}
-                            onChange={handleChange}
-                        />
+                        <textarea name="address" value={userData.address} onChange={handleChange} />
                     </div>
 
                     <button type="submit" disabled={uploading} className="profile-save-btn">

@@ -122,9 +122,7 @@
     font-size: 16px;
     cursor: pointer;
     margin-top: 10px;
-    transition: background-color 0.2s;
 }
-
 .profile-save-btn:hover {
     background-color: #0056b3;
 }
@@ -133,101 +131,36 @@
     background-color: #aaa;
     cursor: not-allowed;
 }
-
-/* === RWD 零捲軸處理 === */
 /* 針對寬度較窄或高度較短的螢幕，縮小內距、字體、圖片尺寸以避免產生捲軸 */
 @media (max-width: 600px), (max-height: 800px) {
     .profile-card {
-        padding: 15px;
-    }
-    
-    .profile-title {
-        font-size: 20px;
-        margin-bottom: 10px;
-    }
-
-    .profile-form {
-        gap: 8px;
-    }
-
-    .profile-field input[type="text"],
-    .profile-field input[type="email"],
-    .profile-field input[type="tel"] {
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .profile-field textarea {
-        height: 40px;
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .profile-image-preview {
-        width: 60px;
-        height: 60px;
-    }
-
-    .profile-save-btn {
-        padding: 8px;
-        font-size: 14px;
-        margin-top: 5px;
-    }
-}
-
-/* 針對高度極短的螢幕 (例如橫向手機或極小視窗) 進一步擠壓 */
-@media (max-height: 600px) {
-    .profile-page-container {
-        padding: 5px;
-    }
-    
-    .profile-card {
         padding: 10px;
     }
-
     .profile-title {
         font-size: 18px;
         margin-bottom: 5px;
     }
-    
-    .profile-message {
-        margin-bottom: 5px;
-        font-size: 12px;
-    }
-
     .profile-form {
         gap: 5px;
     }
-    
-    .profile-field {
-        gap: 2px;
-    }
-
-    .profile-field label {
-        font-size: 12px;
-    }
-
     .profile-field input[type="text"],
     .profile-field input[type="email"],
     .profile-field input[type="tel"] {
         padding: 4px;
-        font-size: 12px;
+        font-size: 13px;
     }
-
     .profile-field textarea {
         height: 35px;
         padding: 4px;
-        font-size: 12px;
+        font-size: 13px;
     }
-
     .profile-image-preview {
         width: 50px;
         height: 50px;
     }
-
     .profile-save-btn {
         padding: 6px;
-        font-size: 13px;
+        font-size: 14px;
         margin-top: 2px;
     }
 }
