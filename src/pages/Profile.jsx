@@ -40,13 +40,12 @@ export default function Profile() {
             await uploadBytes(storageRef, file);
             const photoURL = await getDownloadURL(storageRef);
 
-            // 更新本地預覽
-            setUserData(function(prev) {
+            setUserData(function (prev) {
                 const newData = Object.assign({}, prev);
                 newData.profilePicture = photoURL;
                 return newData;
             });
-            setMessage('照片上傳成功，請記得點擊儲存變更。');
+            setMessage('照片上傳成功，請點擊儲存變更。');
         } catch (error) {
             setMessage('圖片上傳失敗：' + error.message);
         } finally {
@@ -75,7 +74,7 @@ export default function Profile() {
     function handleChange(e) {
         const name = e.target.name;
         const value = e.target.value;
-        setUserData(function(prev) {
+        setUserData(function (prev) {
             const newData = Object.assign({}, prev);
             newData[name] = value;
             return newData;

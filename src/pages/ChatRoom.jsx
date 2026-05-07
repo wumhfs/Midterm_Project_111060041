@@ -7,7 +7,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import app from '../firebase';
-import './Chat.css';
+import './ChatRoom.css';
 
 export default function Chat() {
     const { currentUser, logout } = useAuth();
@@ -27,6 +27,7 @@ export default function Chat() {
     const [editingMsgId, setEditingMsgId] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [replyToMsg, setReplyToMsg] = useState(null);
+    const [highlightMsgId, setHighlightMsgId] = useState(null);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -65,7 +66,7 @@ export default function Chat() {
 
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
-    useEffect(function() {
+    useEffect(function () {
         scrollToBottom();
     }, [messages]);
 
@@ -92,7 +93,7 @@ export default function Chat() {
                     if (change.type === "added") {
                         const msg = change.doc.data();
                         const msgId = change.doc.id;
-                        
+
                         if (msg.senderId === currentUser.uid) return;
                         if (notifiedMsgsRef.current.has(msgId)) return;
                         notifiedMsgsRef.current.add(msgId);
@@ -226,6 +227,19 @@ export default function Chat() {
         setReplyToMsg(null);
     }
 
+    function scrollToOriginalMessage(msgId) {
+        const el = document.getElementById("msg-" + msgId);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightMsgId(msgId);
+            setTimeout(function() {
+                setHighlightMsgId(null);
+            }, 2000);
+        } else {
+            alert("找不到該則原始訊息，可能已被收回或尚未載入。");
+        }
+    }
+
     async function handleLogout() {
         await logout();
         navigate('/');
@@ -276,7 +290,7 @@ export default function Chat() {
                 roomClassName = roomClassName + " active";
             }
         }
-        
+
         let roomNameText = room.name;
         if (!roomNameText) {
             roomNameText = "未命名群組";
@@ -286,7 +300,7 @@ export default function Chat() {
             <div
                 key={room.id}
                 className={roomClassName}
-                onClick={function() { setCurrentRoom(room); }}
+                onClick={function () { setCurrentRoom(room); }}
             >
                 {roomNameText}
             </div>
@@ -313,6 +327,9 @@ export default function Chat() {
                 messageWrapperClass = messageWrapperClass + " mine";
             } else {
                 messageWrapperClass = messageWrapperClass + " others";
+            }
+            if (highlightMsgId === msg.id) {
+                messageWrapperClass = messageWrapperClass + " message-highlight";
             }
 
             let avatarElement = null;
@@ -343,7 +360,7 @@ export default function Chat() {
                         quoteSenderName = usersCache[msg.replyTo.senderId].email;
                     }
                 }
-                
+
                 let quoteContent = null;
                 if (msg.replyTo.type === 'text') {
                     quoteContent = <span>{msg.replyTo.text}</span>;
@@ -352,7 +369,11 @@ export default function Chat() {
                 }
 
                 quotedMessageElement = (
-                    <div className="quoted-message">
+                    <div 
+                        className="quoted-message" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={function() { scrollToOriginalMessage(msg.replyTo.id); }}
+                    >
                         <strong>{quoteSenderName}: </strong>
                         {quoteContent}
                     </div>
@@ -371,12 +392,12 @@ export default function Chat() {
             let deleteButton = null;
             if (isMine) {
                 if (msg.type === 'text') {
-                    editButton = <button onClick={function() { startEditing(msg); }}>編輯</button>;
+                    editButton = <button onClick={function () { startEditing(msg); }}>編輯</button>;
                 }
-                deleteButton = <button onClick={function() { handleDeleteMessage(msg.id); }}>收回</button>;
+                deleteButton = <button onClick={function () { handleDeleteMessage(msg.id); }}>收回</button>;
             }
-            
-            let replyButton = <button onClick={function() { startReplying(msg); }}>回覆</button>;
+
+            let replyButton = <button onClick={function () { startReplying(msg); }}>回覆</button>;
 
             messageActionsElement = (
                 <div className="message-actions">
@@ -392,7 +413,7 @@ export default function Chat() {
             }
 
             messageElements.push(
-                <div key={msg.id} className={messageWrapperClass}>
+                <div key={msg.id} id={"msg-" + msg.id} className={messageWrapperClass}>
                     {avatarElement}
                     <div className="message-content">
                         {senderNameElement}
@@ -407,15 +428,9 @@ export default function Chat() {
             );
         }
 
-        let inputPlaceholder = "輸入訊息...";
-        if (editingMsgId) {
-            inputPlaceholder = "編輯訊息...";
-        }
+        let inputPlaceholder = editingMsgId ? "編輯訊息..." : "輸入訊息...";
 
-        let submitButtonText = "發送";
-        if (editingMsgId) {
-            submitButtonText = "儲存";
-        }
+        let submitButtonText = editingMsgId ? "儲存" : "發送";
 
         let submitDisabled = false;
         if (uploadingImage) {
@@ -443,7 +458,7 @@ export default function Chat() {
             } else {
                 replyText = "[圖片]";
             }
-            
+
             let replySenderName = "某人";
             if (usersCache[replyToMsg.senderId]) {
                 if (usersCache[replyToMsg.senderId].username) {
@@ -495,13 +510,13 @@ export default function Chat() {
                         disabled={uploadingImage}
                     />
                     <label className="upload-btn">
-                        📷
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleSendImage} 
-                            style={{ display: 'none' }} 
-                            disabled={uploadingImage} 
+                        +
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSendImage}
+                            style={{ display: 'none' }}
+                            disabled={uploadingImage}
                         />
                     </label>
                     <button type="submit" disabled={submitDisabled}>
@@ -521,11 +536,10 @@ export default function Chat() {
 
     return (
         <div className={chatLayoutClass}>
-            {/* 左側：聊天室列表 */}
             <div className="sidebar">
                 <div className="sidebar-header">
                     <h3>我的聊天室</h3>
-                    <button onClick={handleCreateRoom} className="icon-btn">➕ 新增</button>
+                    <button onClick={handleCreateRoom} className="icon-btn">新增聊天室</button>
                 </div>
                 <div className="room-list">
                     {roomListElements}
@@ -536,7 +550,6 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* 右側：主聊天區域 */}
             <div className="main-chat">
                 {mainChatContent}
             </div>

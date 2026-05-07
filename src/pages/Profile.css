@@ -1,6 +1,5 @@
 .profile-page-container {
     height: 100vh;
-    width: 100%;
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -15,6 +14,7 @@
         opacity: 0;
         transform: scale(0.9);
     }
+
     100% {
         opacity: 1;
         transform: scale(1);
@@ -28,19 +28,15 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 500px;
-    display: flex;
-    flex-direction: column;
     animation: popIn 0.5s ease-out forwards;
     box-sizing: border-box;
-    /* 確保即使在小螢幕也不會有內部捲軸 */
     max-height: 100%;
     overflow: hidden;
 }
 
 .profile-title {
     text-align: center;
-    margin-top: 0;
-    margin-bottom: 20px;
+    margin: 0 0 20px;
     color: #333;
     font-size: 24px;
 }
@@ -123,6 +119,7 @@
     cursor: pointer;
     margin-top: 10px;
 }
+
 .profile-save-btn:hover {
     background-color: #0056b3;
 }
@@ -131,33 +128,41 @@
     background-color: #aaa;
     cursor: not-allowed;
 }
+
 /* 針對寬度較窄或高度較短的螢幕，縮小內距、字體、圖片尺寸以避免產生捲軸 */
-@media (max-width: 600px), (max-height: 800px) {
+@media (max-width: 600px),
+(max-height: 800px) {
     .profile-card {
         padding: 10px;
     }
+
     .profile-title {
         font-size: 18px;
         margin-bottom: 5px;
     }
+
     .profile-form {
         gap: 5px;
     }
+
     .profile-field input[type="text"],
     .profile-field input[type="email"],
     .profile-field input[type="tel"] {
         padding: 4px;
         font-size: 13px;
     }
+
     .profile-field textarea {
         height: 35px;
         padding: 4px;
         font-size: 13px;
     }
+
     .profile-image-preview {
         width: 50px;
         height: 50px;
     }
+
     .profile-save-btn {
         padding: 6px;
         font-size: 14px;
