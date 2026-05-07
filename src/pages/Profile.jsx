@@ -30,27 +30,31 @@ export default function Profile() {
         };
         fetchUserData();
     }, [currentUser, db]);
-    const handleImageChange = async (e) => {
+    async function handleImageChange(e) {
         const file = e.target.files[0];
         if (!file) return;
 
         setUploading(true);
         try {
-            const storageRef = ref(storage, `profiles/${currentUser.uid}`);
+            const storageRef = ref(storage, "profiles/" + currentUser.uid);
             await uploadBytes(storageRef, file);
             const photoURL = await getDownloadURL(storageRef);
 
             // 更新本地預覽
-            setUserData(prev => ({ ...prev, profilePicture: photoURL }));
+            setUserData(function(prev) {
+                const newData = Object.assign({}, prev);
+                newData.profilePicture = photoURL;
+                return newData;
+            });
             setMessage('照片上傳成功，請記得點擊儲存變更。');
         } catch (error) {
             setMessage('圖片上傳失敗：' + error.message);
         } finally {
             setUploading(false);
         }
-    };
+    }
 
-    const handleSave = async (e) => {
+    async function handleSave(e) {
         e.preventDefault();
         setMessage('儲存中...');
 
@@ -66,26 +70,39 @@ export default function Profile() {
         } catch (error) {
             setMessage('儲存失敗：' + error.message);
         }
-    };
+    }
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setUserData(prev => ({ ...prev, [name]: value }));
-    };
+    function handleChange(e) {
+        const name = e.target.name;
+        const value = e.target.value;
+        setUserData(function(prev) {
+            const newData = Object.assign({}, prev);
+            newData[name] = value;
+            return newData;
+        });
+    }
+
+    let messageElement = null;
+    if (message) {
+        messageElement = <p className="profile-message">{message}</p>;
+    }
+
+    let profilePictureElement = null;
+    if (userData.profilePicture) {
+        profilePictureElement = <img src={userData.profilePicture} alt="Profile" className="profile-image-preview" />;
+    }
 
     return (
         <div className="profile-page-container">
             <div className="profile-card">
                 <h1 className="profile-title">個人資料設定</h1>
-                {message && <p className="profile-message">{message}</p>}
+                {messageElement}
 
                 <form onSubmit={handleSave} className="profile-form">
                     <div className="profile-field">
                         <label>大頭貼：</label>
                         <div className="profile-picture-container">
-                            {userData.profilePicture && (
-                                <img src={userData.profilePicture} alt="Profile" className="profile-image-preview" />
-                            )}
+                            {profilePictureElement}
                             <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} className="profile-file-input" />
                         </div>
                     </div>

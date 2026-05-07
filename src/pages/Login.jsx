@@ -7,7 +7,7 @@ import {
     signInWithPopup,
     GoogleAuthProvider
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore'; // 新增 Firestore 函式
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import app from '../firebase';
 import './Login.css';
 
@@ -19,10 +19,9 @@ export default function Login() {
 
     const navigate = useNavigate();
     const auth = getAuth(app);
-    const db = getFirestore(app); // 初始化 Firestore
+    const db = getFirestore(app);
 
-    // 處理 Email 登入或註冊
-    const handleEmailAuth = async (e) => {
+    async function handleEmailAuth(e) {
         e.preventDefault();
         setErrorMsg('');
 
@@ -44,10 +43,10 @@ export default function Login() {
         } catch (error) {
             setErrorMsg(error.message);
         }
-    };
+    }
 
     // 處理 Google 登入
-    const handleGoogleLogin = async () => {
+    async function handleGoogleLogin() {
         setErrorMsg('');
         const provider = new GoogleAuthProvider();
 
@@ -70,14 +69,41 @@ export default function Login() {
         } catch (error) {
             setErrorMsg(error.message);
         }
-    };
+    }
+
+    function handleEmailChange(e) {
+        setEmail(e.target.value);
+    }
+
+    function handlePasswordChange(e) {
+        setPassword(e.target.value);
+    }
+
+    function toggleMode() {
+        setIsRegisterMode(!isRegisterMode);
+    }
+
+    let titleText = '登入聊天室';
+    let submitButtonText = '登入';
+    let toggleButtonText = '還沒有帳號？點此註冊';
+
+    if (isRegisterMode) {
+        titleText = '建立新帳號';
+        submitButtonText = '註冊';
+        toggleButtonText = '已經有帳號了？點此登入';
+    }
+
+    let errorElement = null;
+    if (errorMsg) {
+        errorElement = <div className="error-message">{errorMsg}</div>;
+    }
 
     return (
         <div className="login-container">
             <div className="login-card">
-                <h2 className="login-title">{isRegisterMode ? '建立新帳號' : '登入聊天室'}</h2>
+                <h2 className="login-title">{titleText}</h2>
 
-                {errorMsg && <div className="error-message">{errorMsg}</div>}
+                {errorElement}
 
                 <form className="login-form" onSubmit={handleEmailAuth}>
                     <input
@@ -85,7 +111,7 @@ export default function Login() {
                         className="login-input"
                         placeholder="請輸入 Email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={handleEmailChange}
                         required
                     />
                     <input
@@ -93,17 +119,15 @@ export default function Login() {
                         className="login-input"
                         placeholder="請輸入密碼"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={handlePasswordChange}
                         required
                     />
                     <button type="submit" className="login-button primary-btn">
-                        {isRegisterMode ? '註冊' : '登入'}
+                        {submitButtonText}
                     </button>
                 </form>
 
-                <div className="divider">
-                    <span>或</span>
-                </div>
+                <div className="divider">或</div>
 
                 <button type="button" onClick={handleGoogleLogin} className="login-button google-btn">
                     使用 Google 帳號登入
@@ -111,10 +135,10 @@ export default function Login() {
 
                 <button
                     type="button"
-                    onClick={() => setIsRegisterMode(!isRegisterMode)}
+                    onClick={toggleMode}
                     className="toggle-mode-btn"
                 >
-                    {isRegisterMode ? '已經有帳號了？點此登入' : '還沒有帳號？點此註冊'}
+                    {toggleButtonText}
                 </button>
             </div>
         </div>

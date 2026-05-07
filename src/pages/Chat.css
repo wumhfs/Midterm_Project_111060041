@@ -265,10 +265,62 @@ body {
 .chat-input-area {
     padding: 15px;
     background: white;
-    border-top: 1px solid #ddd;
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+.input-container {
+    background: white;
+    border-top: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+}
+
+.reply-preview {
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #555;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed #ccc;
+}
+
+.reply-preview span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+}
+
+.reply-preview button {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.quoted-message {
+    font-size: 0.85rem;
+    color: #666;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    border-left: 3px solid #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.message-wrapper.mine .quoted-message {
+    background: rgba(255, 255, 255, 0.2);
+    color: #eee;
+    border-left-color: #fff;
 }
 
 .chat-input-area input[type="text"] {

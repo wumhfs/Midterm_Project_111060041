@@ -26,6 +26,7 @@ export default function Chat() {
     const [searchQuery, setSearchQuery] = useState('');
     const [editingMsgId, setEditingMsgId] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [replyToMsg, setReplyToMsg] = useState(null);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -63,6 +64,10 @@ export default function Chat() {
     }, [currentRoom, db]);
 
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    useEffect(function() {
+        scrollToBottom();
+    }, [messages]);
 
     const currentRoomIdRef = useRef(null);
     const usersCacheRef = useRef({});
@@ -114,7 +119,7 @@ export default function Chat() {
         return () => unsubscribes.forEach(unsub => unsub());
     }, [currentUser, rooms, db]);
 
-    const handleCreateRoom = async () => {
+    async function handleCreateRoom() {
         const roomName = prompt("請輸入新聊天室/群組名稱：");
         if (!roomName) return;
         await addDoc(collection(db, "rooms"), {
@@ -122,76 +127,400 @@ export default function Chat() {
             members: [currentUser.uid],
             createdAt: serverTimestamp()
         });
-    };
+    }
 
-    const handleInviteMember = async () => {
+    async function handleInviteMember() {
         if (!currentRoom) return;
         const inviteEmail = prompt("請輸入欲邀請使用者的 Email：");
         if (!inviteEmail) return;
 
-        const targetUser = Object.entries(usersCache).find(([uid, data]) => data.email === inviteEmail);
-        if (targetUser) {
-            await updateDoc(doc(db, "rooms", currentRoom.id), { members: arrayUnion(targetUser[0]) });
+        let targetUserId = null;
+        const userIds = Object.keys(usersCache);
+        for (let i = 0; i < userIds.length; i++) {
+            const uid = userIds[i];
+            if (usersCache[uid].email === inviteEmail) {
+                targetUserId = uid;
+                break;
+            }
+        }
+
+        if (targetUserId) {
+            await updateDoc(doc(db, "rooms", currentRoom.id), { members: arrayUnion(targetUserId) });
             alert("邀請成功！");
         } else {
             alert("找不到該使用者。");
         }
-    };
+    }
 
-    const handleSendMessage = async (e) => {
+    async function handleSendMessage(e) {
         e.preventDefault();
         if (!inputText.trim() || !currentRoom) return;
 
         if (editingMsgId) {
-            await updateDoc(doc(db, `rooms/${currentRoom.id}/messages`, editingMsgId), { text: inputText, isEdited: true });
+            await updateDoc(doc(db, "rooms/" + currentRoom.id + "/messages", editingMsgId), { text: inputText, isEdited: true });
             setEditingMsgId(null);
         } else {
-            await addDoc(collection(db, `rooms/${currentRoom.id}/messages`), {
-                text: inputText, senderId: currentUser.uid, timestamp: serverTimestamp(), type: 'text'
+            let replyData = null;
+            if (replyToMsg) {
+                replyData = {
+                    id: replyToMsg.id,
+                    senderId: replyToMsg.senderId,
+                    type: replyToMsg.type,
+                    text: replyToMsg.text || null,
+                    imageUrl: replyToMsg.imageUrl || null
+                };
+            }
+            await addDoc(collection(db, "rooms/" + currentRoom.id + "/messages"), {
+                text: inputText, senderId: currentUser.uid, timestamp: serverTimestamp(), type: 'text', replyTo: replyData
             });
         }
         setInputText('');
-    };
+        setReplyToMsg(null);
+    }
 
-    const handleSendImage = async (e) => {
+    async function handleSendImage(e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) return;
         setUploadingImage(true);
         try {
-            const imageRef = ref(storage, `chat_images/${currentRoom.id}/${Date.now()}_${file.name}`);
+            const imageRef = ref(storage, "chat_images/" + currentRoom.id + "/" + Date.now() + "_" + file.name);
             await uploadBytes(imageRef, file);
-            await addDoc(collection(db, `rooms/${currentRoom.id}/messages`), {
-                imageUrl: await getDownloadURL(imageRef), senderId: currentUser.uid, timestamp: serverTimestamp(), type: 'image'
+            const downloadUrl = await getDownloadURL(imageRef);
+            let replyData = null;
+            if (replyToMsg) {
+                replyData = {
+                    id: replyToMsg.id,
+                    senderId: replyToMsg.senderId,
+                    type: replyToMsg.type,
+                    text: replyToMsg.text || null,
+                    imageUrl: replyToMsg.imageUrl || null
+                };
+            }
+            await addDoc(collection(db, "rooms/" + currentRoom.id + "/messages"), {
+                imageUrl: downloadUrl, senderId: currentUser.uid, timestamp: serverTimestamp(), type: 'image', replyTo: replyData
             });
+            setReplyToMsg(null);
         } catch (error) {
             alert("圖片發送失敗：" + error.message);
         } finally {
             setUploadingImage(false);
         }
-    };
+    }
 
-    const handleDeleteMessage = async (msgId) => {
+    async function handleDeleteMessage(msgId) {
         if (window.confirm("確定要收回這則訊息嗎？")) {
-            await deleteDoc(doc(db, `rooms/${currentRoom.id}/messages`, msgId));
+            await deleteDoc(doc(db, "rooms/" + currentRoom.id + "/messages", msgId));
         }
-    };
+    }
 
-    const startEditing = (msg) => {
+    function startEditing(msg) {
         setEditingMsgId(msg.id);
         setInputText(msg.text);
-    };
+    }
 
-    const handleLogout = async () => {
+    function startReplying(msg) {
+        setReplyToMsg(msg);
+    }
+
+    function cancelReplying() {
+        setReplyToMsg(null);
+    }
+
+    async function handleLogout() {
         await logout();
         navigate('/');
-    };
+    }
 
-    const filteredMessages = messages.filter(msg => 
-        msg.type === 'text' && msg.text.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    function handleSearchChange(e) {
+        setSearchQuery(e.target.value);
+    }
+
+    function handleInputChange(e) {
+        setInputText(e.target.value);
+    }
+
+    function cancelEditing() {
+        setEditingMsgId(null);
+        setInputText('');
+    }
+
+    function navigateToProfile() {
+        navigate('/profile');
+    }
+
+    function clearCurrentRoom() {
+        setCurrentRoom(null);
+    }
+
+    const filteredMessages = [];
+    for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        if (msg.type === 'text') {
+            if (msg.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+                filteredMessages.push(msg);
+            }
+        }
+    }
+
+    let chatLayoutClass = "chat-layout";
+    if (currentRoom) {
+        chatLayoutClass = chatLayoutClass + " room-active";
+    }
+
+    let roomListElements = [];
+    for (let i = 0; i < rooms.length; i++) {
+        let room = rooms[i];
+        let roomClassName = "room-item";
+        if (currentRoom) {
+            if (currentRoom.id === room.id) {
+                roomClassName = roomClassName + " active";
+            }
+        }
+        
+        let roomNameText = room.name;
+        if (!roomNameText) {
+            roomNameText = "未命名群組";
+        }
+
+        roomListElements.push(
+            <div
+                key={room.id}
+                className={roomClassName}
+                onClick={function() { setCurrentRoom(room); }}
+            >
+                {roomNameText}
+            </div>
+        );
+    }
+
+    let mainChatContent = null;
+    if (currentRoom) {
+        let messageElements = [];
+        for (let i = 0; i < filteredMessages.length; i++) {
+            let msg = filteredMessages[i];
+            let isMine = false;
+            if (msg.senderId === currentUser.uid) {
+                isMine = true;
+            }
+
+            let senderInfo = usersCache[msg.senderId];
+            if (!senderInfo) {
+                senderInfo = {};
+            }
+
+            let messageWrapperClass = "message-wrapper";
+            if (isMine) {
+                messageWrapperClass = messageWrapperClass + " mine";
+            } else {
+                messageWrapperClass = messageWrapperClass + " others";
+            }
+
+            let avatarElement = null;
+            if (!isMine) {
+                if (senderInfo.profilePicture) {
+                    avatarElement = <img src={senderInfo.profilePicture} alt="avatar" className="avatar" />;
+                } else {
+                    avatarElement = <div className="avatar"></div>;
+                }
+            }
+
+            let senderNameElement = null;
+            if (!isMine) {
+                let senderName = senderInfo.username;
+                if (!senderName) {
+                    senderName = senderInfo.email;
+                }
+                senderNameElement = <span className="sender-name">{senderName}</span>;
+            }
+
+            let quotedMessageElement = null;
+            if (msg.replyTo) {
+                let quoteSenderName = "某人";
+                if (usersCache[msg.replyTo.senderId]) {
+                    if (usersCache[msg.replyTo.senderId].username) {
+                        quoteSenderName = usersCache[msg.replyTo.senderId].username;
+                    } else if (usersCache[msg.replyTo.senderId].email) {
+                        quoteSenderName = usersCache[msg.replyTo.senderId].email;
+                    }
+                }
+                
+                let quoteContent = null;
+                if (msg.replyTo.type === 'text') {
+                    quoteContent = <span>{msg.replyTo.text}</span>;
+                } else {
+                    quoteContent = <span>[圖片]</span>;
+                }
+
+                quotedMessageElement = (
+                    <div className="quoted-message">
+                        <strong>{quoteSenderName}: </strong>
+                        {quoteContent}
+                    </div>
+                );
+            }
+
+            let messageBubbleContent = null;
+            if (msg.type === 'text') {
+                messageBubbleContent = <p>{msg.text}</p>;
+            } else {
+                messageBubbleContent = <img src={msg.imageUrl} alt="chat-img" className="chat-image" />;
+            }
+
+            let messageActionsElement = null;
+            let editButton = null;
+            let deleteButton = null;
+            if (isMine) {
+                if (msg.type === 'text') {
+                    editButton = <button onClick={function() { startEditing(msg); }}>編輯</button>;
+                }
+                deleteButton = <button onClick={function() { handleDeleteMessage(msg.id); }}>收回</button>;
+            }
+            
+            let replyButton = <button onClick={function() { startReplying(msg); }}>回覆</button>;
+
+            messageActionsElement = (
+                <div className="message-actions">
+                    {replyButton}
+                    {editButton}
+                    {deleteButton}
+                </div>
+            );
+
+            let editedTagElement = null;
+            if (msg.isEdited) {
+                editedTagElement = <span className="edited-tag">(已編輯)</span>;
+            }
+
+            messageElements.push(
+                <div key={msg.id} className={messageWrapperClass}>
+                    {avatarElement}
+                    <div className="message-content">
+                        {senderNameElement}
+                        <div className="message-bubble">
+                            {quotedMessageElement}
+                            {messageBubbleContent}
+                        </div>
+                        {messageActionsElement}
+                        {editedTagElement}
+                    </div>
+                </div>
+            );
+        }
+
+        let inputPlaceholder = "輸入訊息...";
+        if (editingMsgId) {
+            inputPlaceholder = "編輯訊息...";
+        }
+
+        let submitButtonText = "發送";
+        if (editingMsgId) {
+            submitButtonText = "儲存";
+        }
+
+        let submitDisabled = false;
+        if (uploadingImage) {
+            submitDisabled = true;
+        } else {
+            let hasText = false;
+            if (inputText.trim() !== '') {
+                hasText = true;
+            }
+            if (!hasText && !editingMsgId) {
+                submitDisabled = true;
+            }
+        }
+
+        let cancelEditButton = null;
+        if (editingMsgId) {
+            cancelEditButton = <button type="button" onClick={cancelEditing}>取消</button>;
+        }
+
+        let replyPreviewElement = null;
+        if (replyToMsg) {
+            let replyText = "";
+            if (replyToMsg.type === 'text') {
+                replyText = replyToMsg.text;
+            } else {
+                replyText = "[圖片]";
+            }
+            
+            let replySenderName = "某人";
+            if (usersCache[replyToMsg.senderId]) {
+                if (usersCache[replyToMsg.senderId].username) {
+                    replySenderName = usersCache[replyToMsg.senderId].username;
+                } else if (usersCache[replyToMsg.senderId].email) {
+                    replySenderName = usersCache[replyToMsg.senderId].email;
+                }
+            }
+
+            replyPreviewElement = (
+                <div className="reply-preview">
+                    <span>回覆 {replySenderName}: {replyText}</span>
+                    <button type="button" onClick={cancelReplying}>✕</button>
+                </div>
+            );
+        }
+
+        mainChatContent = [
+            <div key="header" className="chat-header">
+                <h2>
+                    <button className="back-btn" onClick={clearCurrentRoom}>⬅️</button>
+                    {currentRoom.name}
+                </h2>
+                <div className="header-actions">
+                    <input
+                        type="text"
+                        placeholder="搜尋訊息..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        className="search-input"
+                    />
+                    <button onClick={handleInviteMember}>邀請成員</button>
+                </div>
+            </div>,
+
+            <div key="list" className="message-list">
+                {messageElements}
+                <div ref={messagesEndRef}></div>
+            </div>,
+
+            <div key="input-container" className="input-container">
+                {replyPreviewElement}
+                <form className="chat-input-area" onSubmit={handleSendMessage}>
+                    <input
+                        type="text"
+                        value={inputText}
+                        onChange={handleInputChange}
+                        placeholder={inputPlaceholder}
+                        disabled={uploadingImage}
+                    />
+                    <label className="upload-btn">
+                        📷
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleSendImage} 
+                            style={{ display: 'none' }} 
+                            disabled={uploadingImage} 
+                        />
+                    </label>
+                    <button type="submit" disabled={submitDisabled}>
+                        {submitButtonText}
+                    </button>
+                    {cancelEditButton}
+                </form>
+            </div>
+        ];
+    } else {
+        mainChatContent = (
+            <div className="empty-state">
+                <h2>請選擇或建立一個聊天室開始對話</h2>
+            </div>
+        );
+    }
 
     return (
-        <div className={`chat-layout ${currentRoom ? 'room-active' : ''}`}>
+        <div className={chatLayoutClass}>
             {/* 左側：聊天室列表 */}
             <div className="sidebar">
                 <div className="sidebar-header">
@@ -199,112 +528,17 @@ export default function Chat() {
                     <button onClick={handleCreateRoom} className="icon-btn">➕ 新增</button>
                 </div>
                 <div className="room-list">
-                    {rooms.map(room => (
-                        <div
-                            key={room.id}
-                            className={`room-item ${currentRoom?.id === room.id ? 'active' : ''}`}
-                            onClick={() => setCurrentRoom(room)}
-                        >
-                            {room.name || '未命名群組'}
-                        </div>
-                    ))}
+                    {roomListElements}
                 </div>
                 <div className="sidebar-footer">
-                    <button onClick={() => navigate('/profile')} className="profile-btn">設定個人資料</button>
+                    <button onClick={navigateToProfile} className="profile-btn">設定個人資料</button>
                     <button onClick={handleLogout} className="logout-btn">登出</button>
                 </div>
             </div>
 
             {/* 右側：主聊天區域 */}
             <div className="main-chat">
-                {currentRoom ? (
-                    <>
-                        <div className="chat-header">
-                            <h2>
-                                <button className="back-btn" onClick={() => setCurrentRoom(null)}>⬅️</button>
-                                {currentRoom.name}
-                            </h2>
-                            <div className="header-actions">
-                                <input
-                                    type="text"
-                                    placeholder="搜尋訊息..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="search-input"
-                                />
-                                <button onClick={handleInviteMember}>邀請成員</button>
-                            </div>
-                        </div>
-
-                        <div className="message-list">
-                            {filteredMessages.map(msg => {
-                                const isMine = msg.senderId === currentUser.uid;
-                                const senderInfo = usersCache[msg.senderId] || {};
-                                return (
-                                    <div key={msg.id} className={`message-wrapper ${isMine ? 'mine' : 'others'}`}>
-                                        {!isMine && (
-                                            senderInfo.profilePicture ? (
-                                                <img src={senderInfo.profilePicture} alt="avatar" className="avatar" />
-                                            ) : (
-                                                <div className="avatar" />
-                                            )
-                                        )}
-                                        <div className="message-content">
-                                            {!isMine && <span className="sender-name">{senderInfo.username || senderInfo.email}</span>}
-                                            <div className="message-bubble">
-                                                {msg.type === 'text' ? (
-                                                    <p>{msg.text}</p>
-                                                ) : (
-                                                    <img src={msg.imageUrl} alt="chat-img" className="chat-image" />
-                                                )}
-                                            </div>
-                                            {isMine && (
-                                                <div className="message-actions">
-                                                    {msg.type === 'text' && (
-                                                        <button onClick={() => startEditing(msg)}>編輯</button>
-                                                    )}
-                                                    <button onClick={() => handleDeleteMessage(msg.id)}>收回</button>
-                                                </div>
-                                            )}
-                                            {msg.isEdited && <span className="edited-tag">(已編輯)</span>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        <form className="chat-input-area" onSubmit={handleSendMessage}>
-                            <input
-                                type="text"
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                placeholder={editingMsgId ? "編輯訊息..." : "輸入訊息..."}
-                                disabled={uploadingImage}
-                            />
-                            <label className="upload-btn">
-                                📷
-                                <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    onChange={handleSendImage} 
-                                    style={{ display: 'none' }} 
-                                    disabled={uploadingImage} 
-                                />
-                            </label>
-                            <button type="submit" disabled={uploadingImage || (!inputText.trim() && !editingMsgId)}>
-                                {editingMsgId ? '儲存' : '發送'}
-                            </button>
-                            {editingMsgId && (
-                                <button type="button" onClick={() => { setEditingMsgId(null); setInputText(''); }}>取消</button>
-                            )}
-                        </form>
-                    </>
-                ) : (
-                    <div className="empty-state">
-                        <h2>請選擇或建立一個聊天室開始對話</h2>
-                    </div>
-                )}
+                {mainChatContent}
             </div>
         </div>
     );
